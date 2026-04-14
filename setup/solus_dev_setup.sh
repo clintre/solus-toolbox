@@ -36,7 +36,7 @@ echo -e "\n------------------------------"
 echo " Install Dev Tools"
 echo "------------------------------"
 
-sudo eopkg it --reinstall ent git github-cli golang  go-task intltool jq solbuild solbuild-config-unstable ypkg yq micro nextcloud-client featherpad fish solseek
+sudo eopkg it --reinstall ent git github-cli golang  go-task intltool jq solbuild solbuild-config-unstable ypkg yq micro nextcloud-client featherpad fish solseek font-firacode-nerd adwaita-fonts
 sudo eopkg remove libreoffice-common thunderbird thunderbird-langpacks -y
 flatpak install flathub it.mijorus.gearlever -y
 

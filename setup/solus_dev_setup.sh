@@ -57,8 +57,8 @@ echo -e "\n------------------------------"
 echo " Configure github-cli"
 echo "------------------------------"
 
-git config --global user.name "Clint Eschberger"
-git config --global user.email clint@eschberger.info
+git config --global user.name "${PKGR_NAME}"
+git config --global user.email "${PKGR_EMAIL}"
 
 gh auth login
 

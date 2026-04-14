@@ -82,5 +82,5 @@ ln -s ~/solus-packages/common/Scripts/helpers.fish ~/.config/fish/conf.d/solus.f
 
 
 echo -e "\n------------------------------"
-echo " Finished W"
+echo " Finished"
 echo "------------------------------"

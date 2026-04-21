@@ -6,6 +6,7 @@ mkdir -p "$HOME/.config/solus"
 PKGR_NAME=""
 PKGR_EMAIL=""
 PKGR_MATRIX=""
+WorkDir=""
 
 
 echo "------------------------------"
@@ -16,6 +17,10 @@ echo "------------------------------"
 read -p "Enter your Name: " PKGR_NAME
 read -p "Enter your Email: " PKGR_EMAIL
 read -p "Enter your Matrix Username: " PKGR_MATRIX
+read -p "Enter base directory in your Home directory for work: " WorkDir
+
+# Make sure Base directory exists
+mkdir -p "$HOME/$WorkDir"
 
 # Write the inputs to the packager file
 echo "[Packager]" > "$HOME/.config/solus/packager"
@@ -48,12 +53,6 @@ chsh -s /usr/bin/fish
 
 
 echo -e "\n------------------------------"
-echo "Setting up solbuild"
-echo "------------------------------"
-sudo solbuild init
-sudo solbuild update
-
-echo -e "\n------------------------------"
 echo " Configure github-cli"
 echo "------------------------------"
 
@@ -79,6 +78,18 @@ source ~/.bashrc
 
 mkdir -p ~/.config/fish/conf.d
 ln -s ~/solus-packages/common/Scripts/helpers.fish ~/.config/fish/conf.d/solus.fish
+
+
+echo -e "\n------------------------------"
+echo "Setting up  base repo and solbuild"
+echo "------------------------------"
+cd "$HOME/$WorkDir"
+gh repo clone packages ./solus-packages
+cd ./solus-packages
+
+
+sudo solbuild init
+sudo solbuild update
 
 
 echo -e "\n------------------------------"

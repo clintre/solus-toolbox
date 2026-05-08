@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 
+if [ "$EUID" -ne 0 ]; then
+  echo "Error: Test requires sudo to run!" >&2
+  exit 1
+fi
+
 # ==============================================================================
 # Solus Linux Kernel Sanity & Smoke Test Script
 # ==============================================================================
 clear
 echo -e "\033[1m============================================================\033[0m"
-echo " Solus Kernel Regression & Smoke Test v0.1"
+echo " Solus Kernel Regression & Smoke Test v0.2"
 echo -e "\033[1m============================================================\033[0m"
 
 

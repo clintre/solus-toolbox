@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 
-# ==============================================================================
-# Solus Linux Kernel Sanity & Smoke Test Script
-# ==============================================================================
-clear
+# Require root immediately before doing anything else
+if [[ $EUID -ne 0 ]]; then
+   echo "Error: This script must be run as root" >&2
+   exit 1
+fi
 
 # ==============================================================================
 # Dependency Check
 # ==============================================================================
 MISSING_DEPS=0
-for cmd in sysbench stress-ng; do
+# Added lspci (pciutils) and mkfs.ext4 (e2fsprogs) to the requirements
+for cmd in sysbench stress-ng lspci mkfs.ext4; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
         echo "Error: Required command '$cmd' is not installed." >&2
         MISSING_DEPS=1
@@ -18,12 +20,15 @@ done
 
 if [ "$MISSING_DEPS" -ne 0 ]; then
     echo "Please install missing dependencies and try again." >&2
-    rm -f "$LOG_FILE" 
     exit 1
 fi
 
+# ==============================================================================
+# Solus Linux Kernel Sanity & Smoke Test Script
+# ==============================================================================
+clear
 echo -e "\033[1m============================================================\033[0m"
-echo " Solus Kernel Regression & Smoke Test v0.3"
+echo " Solus Kernel Regression & Smoke Test v0.4"
 echo -e "\033[1m============================================================\033[0m"
 
 # Safely create a temporary file
@@ -33,12 +38,6 @@ LOG_FILE=$(mktemp /tmp/solus_kernel_test_XXXXXX.log)
 log_echo() {
     echo -e "$1" | tee -a "$LOG_FILE"
 }
-
-# Require root
-if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root"
-   exit 1
-fi
 
 log_echo "============================================================"
 log_echo " Starting Kernel Regression & Smoke Test"
@@ -83,22 +82,15 @@ log_echo "[*] Testing CPU Computation..."
 if sysbench cpu --cpu-max-prime=10000 run > /dev/null 2>&1; then
     log_echo " -> CPU Test: PASSED (sysbench)"
 else
-    START=$(date +%s)
-    echo "scale=5000; a(1)*4" | bc -l > /dev/null 2>&1
-    END=$(date +%s)
-    log_echo " -> CPU Test: PASSED (bc fallback, took $((END-START)) seconds)"
+    log_echo " -> CPU Test: FAILED (sysbench error)"
 fi
 
 # --- MEMORY TEST ---
 log_echo "[*] Testing Memory Allocation..."
-if command -v stress-ng > /dev/null 2>&1; then
-    if stress-ng --vm 1 --vm-bytes 256M --timeout 5s > /dev/null 2>&1; then
-        log_echo " -> Memory Test: PASSED (stress-ng)"
-    else
-        log_echo " -> Memory Test: FAILED (stress-ng)"
-    fi
+if stress-ng --vm 1 --vm-bytes 256M --timeout 5s > /dev/null 2>&1; then
+    log_echo " -> Memory Test: PASSED (stress-ng)"
 else
-    log_echo " -> Memory Test: SKIPPED (stress-ng not installed)"
+    log_echo " -> Memory Test: FAILED (stress-ng error)"
 fi
 
 # --- DISK I/O TEST ---
@@ -126,6 +118,49 @@ if ip link show lo | grep -q "state UNKNOWN\|state UP"; then
 else
     log_echo " -> Network Test: FAILED (Loopback down)"
 fi
+
+# --- RNG / ENTROPY TEST ---
+log_echo "[*] Testing Kernel Random Number Generator..."
+if dd if=/dev/urandom of=/dev/null bs=1K count=10 > /dev/null 2>&1; then
+    log_echo " -> RNG Test: PASSED (/dev/urandom accessible)"
+else
+    log_echo " -> RNG Test: FAILED (Entropy pool issue)"
+fi
+
+# --- VIRTUAL FILESYSTEM TEST ---
+log_echo "[*] Testing Virtual Filesystems..."
+if [ -d "/proc/1" ] && [ -d "/sys/kernel" ]; then
+    log_echo " -> VFS Test: PASSED (/proc and /sys are populated)"
+else
+    log_echo " -> VFS Test: FAILED (Missing critical VFS structures)"
+fi
+
+# --- HARDWARE ENUMERATION TEST ---
+log_echo "[*] Testing PCI Bus Enumeration..."
+if lspci | grep -q "Host bridge"; then
+    log_echo " -> Hardware Test: PASSED (PCI bus enumerated)"
+else
+    log_echo " -> Hardware Test: FAILED (lspci returned empty or failed)"
+fi
+
+# --- FILESYSTEM & BLOCK DEVICE TEST ---
+log_echo "[*] Testing Loopback Mount & Filesystem Drivers..."
+MNT_DIR=$(mktemp -d /tmp/mnt_test_XXXXXX)
+IMG_FILE=$(mktemp /var/tmp/img_test_XXXXXX.img)
+
+if dd if=/dev/zero of="$IMG_FILE" bs=1M count=10 > /dev/null 2>&1 && \
+   mkfs.ext4 -q -F "$IMG_FILE" > /dev/null 2>&1 && \
+   mount -o loop "$IMG_FILE" "$MNT_DIR" > /dev/null 2>&1; then
+   
+   umount "$MNT_DIR"
+   log_echo " -> Mount Test: PASSED (ext4 loopback successful)"
+else
+   log_echo " -> Mount Test: FAILED (Block/VFS layer error)"
+fi
+
+rm -f "$IMG_FILE"
+rmdir "$MNT_DIR"
+
 log_echo "\n"
 
 

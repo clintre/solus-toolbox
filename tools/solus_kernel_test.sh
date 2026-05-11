@@ -28,7 +28,7 @@ fi
 # ==============================================================================
 clear
 echo -e "\033[1m============================================================\033[0m"
-echo " Solus Kernel Regression & Smoke Test v0.4"
+echo " Solus Kernel Regression & Smoke Test v0.5"
 echo -e "\033[1m============================================================\033[0m"
 
 # Safely create a temporary file
@@ -133,6 +133,46 @@ if [ -d "/proc/1" ] && [ -d "/sys/kernel" ]; then
     log_echo " -> VFS Test: PASSED (/proc and /sys are populated)"
 else
     log_echo " -> VFS Test: FAILED (Missing critical VFS structures)"
+fi
+
+# --- CGROUPS & NAMESPACES TEST ---
+log_echo "[*] Testing Cgroups & Namespaces..."
+if [ -d "/sys/fs/cgroup" ] && unshare --user --pid --map-root-user echo >/dev/null 2>&1; then
+    log_echo " -> Cgroups/Namespaces: PASSED (Sandboxing supported)"
+else
+    log_echo " -> Cgroups/Namespaces: WARNING (Cgroups missing or namespace creation failed)"
+fi
+
+# --- AUDIO SUBSYSTEM TEST ---
+log_echo "[*] Testing Audio (ALSA) Subsystem..."
+if [ -d "/dev/snd" ] && grep -q ".*" /proc/asound/cards 2>/dev/null; then
+    log_echo " -> Audio Test: PASSED (Sound hardware detected)"
+else
+    log_echo " -> Audio Test: WARNING (No sound cards found or ALSA inactive)"
+fi
+
+# --- INPUT SUBSYSTEM TEST ---
+log_echo "[*] Testing Input Subsystem (evdev)..."
+if ls /dev/input/event* >/dev/null 2>&1; then
+    log_echo " -> Input Test: PASSED (Input devices detected)"
+else
+    log_echo " -> Input Test: WARNING (No evdev input devices found)"
+fi
+
+# --- RTC (Real-Time Clock) TEST ---
+log_echo "[*] Testing Real-Time Clock (RTC)..."
+if cat /sys/class/rtc/rtc0/time >/dev/null 2>&1 || cat /proc/driver/rtc >/dev/null 2>&1; then
+    log_echo " -> RTC Test: PASSED (Hardware clock accessible)"
+else
+    log_echo " -> RTC Test: FAILED (RTC node missing)"
+fi
+
+# --- GRAPHICS / DRM TEST ---
+log_echo "[*] Testing Graphics (DRM/KMS) Subsystem..."
+if [ -d "/dev/dri" ] && ls /dev/dri/card* >/dev/null 2>&1; then
+    log_echo " -> Graphics Test: PASSED (DRM nodes found in /dev/dri)"
+else
+    log_echo " -> Graphics Test: WARNING (No DRM nodes found. Driver failure or headless?)"
 fi
 
 # --- HARDWARE ENUMERATION TEST ---

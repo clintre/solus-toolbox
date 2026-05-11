@@ -1,20 +1,30 @@
 #!/usr/bin/env bash
 
-if [ "$EUID" -ne 0 ]; then
-  echo "Error: Test requires sudo to run!" >&2
-  exit 1
-fi
-
 # ==============================================================================
 # Solus Linux Kernel Sanity & Smoke Test Script
 # ==============================================================================
 clear
+
+# ==============================================================================
+# Dependency Check
+# ==============================================================================
+MISSING_DEPS=0
+for cmd in sysbench stress-ng; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "Error: Required command '$cmd' is not installed." >&2
+        MISSING_DEPS=1
+    fi
+done
+
+if [ "$MISSING_DEPS" -ne 0 ]; then
+    echo "Please install missing dependencies and try again." >&2
+    rm -f "$LOG_FILE" 
+    exit 1
+fi
+
 echo -e "\033[1m============================================================\033[0m"
-echo " Solus Kernel Regression & Smoke Test v0.2"
+echo " Solus Kernel Regression & Smoke Test v0.3"
 echo -e "\033[1m============================================================\033[0m"
-
-
-
 
 # Safely create a temporary file
 LOG_FILE=$(mktemp /tmp/solus_kernel_test_XXXXXX.log)
@@ -81,15 +91,19 @@ fi
 
 # --- MEMORY TEST ---
 log_echo "[*] Testing Memory Allocation..."
-if dd if=/dev/zero of=/dev/null bs=1M count=256 > /dev/null 2>&1; then
-    log_echo " -> Memory Test: PASSED"
+if command -v stress-ng > /dev/null 2>&1; then
+    if stress-ng --vm 1 --vm-bytes 256M --timeout 5s > /dev/null 2>&1; then
+        log_echo " -> Memory Test: PASSED (stress-ng)"
+    else
+        log_echo " -> Memory Test: FAILED (stress-ng)"
+    fi
 else
-    log_echo " -> Memory Test: FAILED"
+    log_echo " -> Memory Test: SKIPPED (stress-ng not installed)"
 fi
 
 # --- DISK I/O TEST ---
-log_echo "[*] Testing Temporary File System I/O..."
-TEST_FILE=$(mktemp /tmp/kernel_io_test_XXXXXX)
+log_echo "[*] Testing Physical Disk I/O..."
+TEST_FILE=$(mktemp /var/tmp/kernel_io_test_XXXXXX)
 if dd if=/dev/zero of="$TEST_FILE" bs=1M count=50 > /dev/null 2>&1; then
     if dd if="$TEST_FILE" of=/dev/null bs=1M > /dev/null 2>&1; then
         log_echo " -> Disk I/O Test: PASSED"

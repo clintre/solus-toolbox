@@ -2,8 +2,7 @@
 
 # Require root immediately before doing anything else
 if [[ $EUID -ne 0 ]]; then
-   echo "Error: This script must be run as root" >&2
-   exit 1
+   sudo echo ""
 fi
 
 # ==============================================================================

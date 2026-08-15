@@ -9,7 +9,6 @@ fi
 # Dependency Check
 # ==============================================================================
 MISSING_DEPS=0
-# Added lspci (pciutils) and mkfs.ext4 (e2fsprogs) to the requirements
 for cmd in sysbench stress-ng lspci mkfs.ext4; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
         echo "Error: Required command '$cmd' is not installed." >&2
@@ -26,9 +25,9 @@ fi
 # Solus Linux Kernel Sanity & Smoke Test Script
 # ==============================================================================
 clear
-echo -e "\033[1m============================================================\033[0m"
-echo " Solus Kernel Regression & Smoke Test v0.5"
-echo -e "\033[1m============================================================\033[0m"
+echo -e "\033[1;36m────────────────────────────────────────────────────────────"
+echo -e " Solus Kernel Regression & Smoke Test v0.6"
+echo -e "────────────────────────────────────────────────────────────\033[0m"
 
 # Safely create a temporary file
 LOG_FILE=$(mktemp /tmp/solus_kernel_test_XXXXXX.log)
@@ -38,16 +37,17 @@ log_echo() {
     echo -e "$1" | tee -a "$LOG_FILE"
 }
 
-log_echo "============================================================"
+log_echo "────────────────────────────────────────────────────────────"
 log_echo " Starting Kernel Regression & Smoke Test"
 log_echo " Date: $(date)"
 log_echo " Temporary Log: $LOG_FILE"
-log_echo "============================================================\n"
+log_echo "────────────────────────────────────────────────────────────\n"
 
 
 # 1. System & Kernel Information
 
 log_echo "### SYSTEM INFORMATION ###"
+log_echo "────────────────────────────────────────────────────────────\n"
 log_echo "OS Version: $(grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '\"')"
 log_echo "Kernel Version: $(uname -r)"
 log_echo "Architecture: $(uname -m)"
@@ -57,11 +57,13 @@ log_echo "Uptime: $(uptime -p)\n"
 # 2. Kernel Flags & Modules
 
 log_echo "### KERNEL BOOT FLAGS ###"
+log_echo "────────────────────────────────────────────────────────────\n"
 # Reads the parameters passed to the kernel at boot by clr-boot-manager/systemd-boot
 cat /proc/cmdline | tee -a "$LOG_FILE"
 log_echo "\n"
 
 log_echo "### LOADED KERNEL MODULES (Summary) ###"
+log_echo "────────────────────────────────────────────────────────────\n"
 # Counts modules and lists the top 10 to keep output clean, full list to log
 MODULE_COUNT=$(lsmod | wc -l)
 log_echo "Total Modules Loaded: $MODULE_COUNT"
@@ -75,6 +77,7 @@ log_echo "\n"
 # 3. Core Function Tests
 
 log_echo "### CORE SUBSYSTEM TESTS ###"
+log_echo "────────────────────────────────────────────────────────────\n"
 
 # --- CPU TEST ---
 log_echo "[*] Testing CPU Computation..."
@@ -206,9 +209,10 @@ log_echo "\n"
 # 4. Kernel Log (dmesg) Error Audit
 
 log_echo "### KERNEL LOG AUDIT (dmesg warnings/errors) ###"
+log_echo "────────────────────────────────────────────────────────────\n"
 log_echo "Checking for 'error', 'fail', or 'critical' in recent kernel ring buffer..."
 
-DMESG_ERRORS=$(dmesg --level=err,crit)
+DMESG_ERRORS=$(sudo dmesg --level=err,crit)
 
 if [ -z "$DMESG_ERRORS" ]; then
     log_echo " -> Status: CLEAN (No critical errors found in dmesg)"
@@ -217,9 +221,9 @@ else
     echo "$DMESG_ERRORS" | tail -n 5 | tee -a "$LOG_FILE"
 fi
 
-log_echo "\n============================================================"
+log_echo "\n────────────────────────────────────────────────────────────"
 log_echo " Test Complete."
-log_echo "============================================================"
+log_echo "────────────────────────────────────────────────────────────="
 
 
 # 5. Move Log to User Home Directory
